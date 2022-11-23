@@ -4,6 +4,13 @@
 #include <string.h>
 #include <assert.h>
 #include <malloc.h>
+#include "ccan/lstack/lstack.h" //standard C library of a linked stack
+
+struct nextChar
+{
+    char *myChar;
+    struct lstack_link sl;
+};
 
 // TODO: implement this function '
 //ASSUMPTION: the sentence punctuation at the end needs to stay at the end
@@ -15,9 +22,61 @@ static void ReverseWords(char* string)
     //give them a number
     //put back the number in reverse order. 
 
-    int mySize = sizeof(*string);
+    int size = strlen(string);
+    int numSpace = 0;
+
+    int* arrSpaceIdx = (int*)malloc(size * sizeof(int));
+    char* result = (char*)malloc(size);
+
+    //iterate backwards thru the array
+    for (int i = (size-1), j = 0; i >= 0; i--)
+    {
+        if (string[i] == ' ')
+        {
+            arrSpaceIdx[j] = i;
+            numSpace = ++j;
+        }
+    }
+
+    result[size] = '\0'; //append string terminator
+
+    //reassign
+    strcpy(string, result);
+
+
+    //FIX mem leak
+    //free(result);
 
 }
+
+
+
+/*
+
+   struct nextChar *nextCharInStack;
+    LSTACK(struct myStack, sl) stack;
+
+    //O(n) push items all items character-by-character onto the stack
+    for (int i=0; i < mySize; i++)
+    {
+        lstack_push(&stack, string[i]);
+
+        //ASSUMPTION: punctuation stays with the word its paired with.
+        //  otherwise, implement exceptions above
+    }
+
+    char* result = malloc(sizeof(*string));
+
+    for (int i = 0; i < mySize; i++)
+    {
+        result[i] = lstack_pop(&stack);
+    }
+
+
+
+*/
+
+
 
 int main()
 {
