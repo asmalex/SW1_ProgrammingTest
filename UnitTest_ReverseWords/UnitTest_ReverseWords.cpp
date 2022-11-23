@@ -26,6 +26,20 @@ namespace UnitTestReverseWords
 			printf("Reversed String: %s\n\n\n", string);
 		}
 
+		//simple test
+		TEST_METHOD(ReverseWords_SimpleCase_WorldHello)
+		{
+			char string[] = "Hello world";
+			char expectedResult[] = "world Hello";
+			printf("Original String: %s\n", string);
+
+			ReverseWords(string);
+
+			Assert::AreEqual(expectedResult, string);
+
+			printf("Reversed String: %s\n\n\n", string);
+		}
+
 		// With special characters
 		/*
 		TEST_METHOD(ReverseWords_FoxJumpWithChars_JumpFoxWithChars)

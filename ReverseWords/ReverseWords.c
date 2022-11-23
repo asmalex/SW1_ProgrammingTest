@@ -28,17 +28,33 @@ static void ReverseWords(char* string)
     int* arrSpaceIdx = (int*)malloc(size * sizeof(int));
     char* result = (char*)malloc(size);
 
-    //iterate backwards thru the array
-    for (int i = (size-1), j = 0; i >= 0; i--)
+    //finds all the spaces in the string and stores their index in the arrSpaceIdx array
+    for (int j = size-1, lastSpace = size-1,i=0; j>=0; j--)
     {
-        if (string[i] == ' ')
+        if (string[j] == ' ')
         {
-            arrSpaceIdx[j] = i;
-            numSpace = ++j;
+            arrSpaceIdx[numSpace] = j;
+
+            //copy from now until lastspace
+            memcpy(result+i, string+j, lastSpace - j);
+            i += lastSpace - j;
+
+            numSpace++;
+            lastSpace = j;
         }
     }
 
-    result[size] = '\0'; //append string terminator
+    //numSpace--;
+    //string copy arrSpaceIdx backwards to next index
+    for (int j = numSpace-1, endIdx = size; j >= 0; j--)
+    {
+        //grab the index of the last 
+        char* src = string+arrSpaceIdx[j]+1; //address of string + index # of bytes forward
+        memcpy(result, src, endIdx - arrSpaceIdx[j]);
+    }
+
+    //copy the first word to end
+    memcpy(result+arrSpaceIdx[numSpace-1], string, arrSpaceIdx[0]);
 
     //reassign
     strcpy(string, result);
