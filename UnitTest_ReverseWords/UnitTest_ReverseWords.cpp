@@ -12,7 +12,8 @@ namespace UnitTestReverseWords
 	{
 	public:
 		
-		TEST_METHOD(BaseTest)
+		// Example test given
+		TEST_METHOD(ReverseWords_FoxJumpNoChars_JumpFox)
 		{
 			char string[] = "The quick brown fox jumps over the lazy dog";
 			char expectedResult[] = "dog lazy the over jumps fox brown quick The";
@@ -23,7 +24,21 @@ namespace UnitTestReverseWords
 			Assert::AreEqual(expectedResult, string);
 
 			printf("Reversed String: %s\n\n\n", string);
-
 		}
+
+		// With special characters
+		/*
+		TEST_METHOD(ReverseWords_FoxJumpWithChars_JumpFoxWithChars)
+		{
+			char string[] = "The quick brown, fox jumps over the lazy dog!";
+			char expectedResult[] = "dog lazy the over jumps fox brown, quick The!";
+			printf("Original String: %s\n", string);
+
+			ReverseWords(string);
+
+			Assert::AreEqual(expectedResult, string);
+
+			printf("Reversed String: %s\n\n\n", string);
+		} */
 	};
 }

@@ -5,9 +5,18 @@
 #include <assert.h>
 #include <malloc.h>
 
-// TODO: implement this function 
+// TODO: implement this function '
+//ASSUMPTION: the sentence punctuation at the end needs to stay at the end
+//ASSUMPTION: no double spaces allowed. Use trim() to eliminate
+//ASSUMPTION: only special character is . ? or ! for end of sentence.
 static void ReverseWords(char* string)
 {
+    //split the words by whitespace
+    //give them a number
+    //put back the number in reverse order. 
+
+    int mySize = sizeof(*string);
+
 }
 
 int main()
