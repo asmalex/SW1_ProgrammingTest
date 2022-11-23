@@ -32,6 +32,7 @@ int main()
     printf("Reversed String: %s\n\n\n", string);
 
     printf("\nPress any key to continue...");
+
     char c;
     scanf("%c", &c);
 }
