@@ -43,5 +43,5 @@ jobs:
       
     - name: Run Tests
       working-directory: .\x64\Release\
-      run: vstest.console.exe /Platform:x64 .\UnitTest_ReverseString.dll
+      run: vstest.console.exe /Platform:x64 UnitTest_ReverseString.dll
       
