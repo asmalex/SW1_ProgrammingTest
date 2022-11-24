@@ -6,13 +6,13 @@
 #include <malloc.h>
 #include "ccan/lstack/lstack.h" //standard C library of a linked stack
 
-struct nextChar
+struct word
 {
-    char *myChar;
+    char *substring;
     struct lstack_link sl;
 };
 
-// TODO: implement this function '
+//TODO: implement this function '
 //ASSUMPTION: the sentence punctuation at the end needs to stay at the end
 //ASSUMPTION: no double spaces allowed. Use trim() to eliminate
 //ASSUMPTION: only special character is . ? or ! for end of sentence.
@@ -28,40 +28,31 @@ static void ReverseWords(char* string)
     int* arrSpaceIdx = (int*)malloc(size * sizeof(int));
     char* result = (char*)malloc(size);
 
+    LSTACK(struct word, sl) stack;
+
     //finds all the spaces in the string and stores their index in the arrSpaceIdx array
-    for (int j = size-1, lastSpace = size-1,i=0; j>=0; j--)
+    for (int i = 0, j = 0, lastIdx=0; i < size; i++)
     {
-        if (string[j] == ' ')
+        if (string[i] == ' ')
         {
-            arrSpaceIdx[numSpace] = j;
+            arrSpaceIdx[j] = i;     //store the whitespace index in the array
+            numSpace = ++j;         //increment j and assign to numSpace
 
-            //copy from now until lastspace
-            memcpy(result+i, string+j, lastSpace - j);
-            i += lastSpace - j;
+            struct word* nextWord;
+            nextWord = (struct word*)malloc(sizeof(*nextWord));
+            nextWord->substring = (char*)malloc(sizeof(char) * (i - lastIdx));
+            strncpy(nextWord->substring, string + lastIdx, i - lastIdx);
 
-            numSpace++;
-            lastSpace = j;
+            //add the node to the stack
+            lstack_push(&stack, static_cast<word*>nextWord);
         }
     }
 
-    //numSpace--;
-    //string copy arrSpaceIdx backwards to next index
-    for (int j = numSpace-1, endIdx = size; j >= 0; j--)
-    {
-        //grab the index of the last 
-        char* src = string+arrSpaceIdx[j]+1; //address of string + index # of bytes forward
-        memcpy(result, src, endIdx - arrSpaceIdx[j]);
-    }
-
-    //copy the first word to end
-    memcpy(result+arrSpaceIdx[numSpace-1], string, arrSpaceIdx[0]);
-
-    //reassign
-    strcpy(string, result);
+    //loop through the string and pop the items onto a string
 
 
-    //FIX mem leak
-    //free(result);
+
+
 
 }
 
@@ -69,24 +60,7 @@ static void ReverseWords(char* string)
 
 /*
 
-   struct nextChar *nextCharInStack;
-    LSTACK(struct myStack, sl) stack;
 
-    //O(n) push items all items character-by-character onto the stack
-    for (int i=0; i < mySize; i++)
-    {
-        lstack_push(&stack, string[i]);
-
-        //ASSUMPTION: punctuation stays with the word its paired with.
-        //  otherwise, implement exceptions above
-    }
-
-    char* result = malloc(sizeof(*string));
-
-    for (int i = 0; i < mySize; i++)
-    {
-        result[i] = lstack_pop(&stack);
-    }
 
 
 
