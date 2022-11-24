@@ -1,7 +1,8 @@
 #include "stdio.h"
 //#include "pch.h"
 #include "CppUnitTest.h"
-#include "../ReverseWords/ReverseWords.c"
+//#include "../ReverseWords/ReverseWords.c"
+#include "../ReverseWords/ReverseWords.h"
 #include <assert.h>
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;

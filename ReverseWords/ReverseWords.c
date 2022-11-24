@@ -4,6 +4,7 @@
 #include <string.h>
 #include <assert.h>
 #include <malloc.h>
+#include "ReverseWords.h"
 #include "ccan/lstack/lstack.h" //standard C library of a linked stack
 
 struct word
@@ -44,7 +45,7 @@ static void ReverseWords(char* string)
             strncpy(nextWord->substring, string + lastIdx, i - lastIdx);
 
             //add the node to the stack
-            lstack_push(&stack, static_cast<word*>nextWord);
+            lstack_push(&stack, nextWord);
         }
     }
 
