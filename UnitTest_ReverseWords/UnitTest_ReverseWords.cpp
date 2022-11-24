@@ -40,6 +40,20 @@ namespace UnitTestReverseWords
 			printf("Reversed String: %s\n\n\n", string);
 		}
 
+		//no whitespace
+		TEST_METHOD(ReverseWords_NoWhiteSpace_SameResult)
+		{
+			char string[] = "Supercalifragilisticexpialidocious";
+			char expectedResult[] = "Supercalifragilisticexpialidocious";
+			printf("Original String: %s\n", string);
+
+			ReverseWords(string);
+
+			Assert::AreEqual(expectedResult, string);
+
+			printf("Reversed String: %s\n\n\n", string);
+		}
+
 		// With special characters
 		/*
 		TEST_METHOD(ReverseWords_FoxJumpWithChars_JumpFoxWithChars)

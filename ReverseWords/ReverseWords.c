@@ -4,13 +4,6 @@
 #include <string.h>
 #include <assert.h>
 #include <malloc.h>
-#include "ccan/lstack/lstack.h" //standard C library of a linked stack
-
-struct nextChar
-{
-    char *myChar;
-    struct lstack_link sl;
-};
 
 // TODO: implement this function '
 //ASSUMPTION: the sentence punctuation at the end needs to stay at the end
@@ -29,14 +22,27 @@ static void ReverseWords(char* string)
     char* result = (char*)malloc(size);
 
     //finds all the spaces in the string and stores their index in the arrSpaceIdx array
-    for (int j = size-1, lastSpace = size-1,i=0; j>=0; j--)
+    for (int j = size, lastSpace = size,i=0; j>=0; j--)
     {
-        if (string[j] == ' ')
+        //if we've arrived at the first word, it becomes the last.
+        if (j == 0)
+        {
+            //copy the last word over and null terminate
+            memcpy(result + i, string + j, lastSpace - j);
+            result[size] = '\0'; //append the end string character
+        }
+
+        else if (string[j] == ' ')
         {
             arrSpaceIdx[numSpace] = j;
+            int bytesToCopy = lastSpace - j - 1;
 
-            //copy from now until lastspace
-            memcpy(result+i, string+j, lastSpace - j);
+            //copy from here until last space
+            //we add j+i to string memory address because we want the j-th word (and +1 to skip the space)
+            //we add i to the string memory address because we want to copy this into the i-th position
+            //we subtract 1 from the bytesToCopy because we are not copying the whitespace at the beginning, we are adding it to the end
+            memcpy(result+i, string+j+1, bytesToCopy);
+            result[i + bytesToCopy] = ' ';
             i += lastSpace - j;
 
             numSpace++;
@@ -46,15 +52,18 @@ static void ReverseWords(char* string)
 
     //numSpace--;
     //string copy arrSpaceIdx backwards to next index
-    for (int j = numSpace-1, endIdx = size; j >= 0; j--)
-    {
+    //for (int j = numSpace-1, endIdx = size; j >= 0; j--)
+    //{
         //grab the index of the last 
-        char* src = string+arrSpaceIdx[j]+1; //address of string + index # of bytes forward
-        memcpy(result, src, endIdx - arrSpaceIdx[j]);
-    }
+    //    char* src = string+arrSpaceIdx[j]+1; //address of string + index # of bytes forward
+    //    memcpy(result, src, endIdx - arrSpaceIdx[j]);
+    //}
 
     //copy the first word to end
-    memcpy(result+arrSpaceIdx[numSpace-1], string, arrSpaceIdx[0]);
+    //if (numSpace != 0)
+    //    memcpy(result + arrSpaceIdx[numSpace - 1], string, arrSpaceIdx[0]);
+    //else
+    //    memcpy(result, string, size+1); //there are no spaces, copy whole word
 
     //reassign
     strcpy(string, result);
