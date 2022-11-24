@@ -71,56 +71,73 @@ static void PrintList(Node_t* list)
 //ASSUMPTION: This is not a circular linked list. The last node must have a next pointer of null.
 static Node_t* DuplicateList(Node_t* list)
 {
+    Node_t* head = NULL;
+    Node_t* prevReferenceNode = NULL;
+    Node_t* prevNode = NULL;
+
     //sanity check we don't violate
     if (list == NULL)
-        return NULL; 
+        return head; 
 
-    /*
-    Node_t* prevReferenceNode   = NULL;
-    Node_t* prevNode            = NULL;
-
-
-
-    while (list->next != NULL)
+    //solve the trivial problem of copying the nodes
+    Node_t* new_list            = (Node_t*)malloc(sizeof(Node_t));
+    new_list->next              = NULL;
+    new_list->reference         = NULL;
+    head = new_list;
+    while (list != NULL)
     {
         //copy next item in list
+        new_list->next          = (Node_t*)malloc(sizeof(Node_t));
+        new_list                = new_list->next;
 
+        new_list->next          = NULL;
+        new_list->reference     = NULL;
 
+        list = list->next; //move to the next node
     }
-    //copy the last item in the list
 
+    //next let's walk through and assign a number to each node
+
+    return head;
+
+    //copy the last item in the list
+    /*
     Node_t* new_list = (Node_t*)malloc(sizeof(Node_t));
     new_list->next = NULL;
     new_list->reference = prevReferenceNode; 
-    return new_list;
+    return new_list
+    */
 
 
+    
 
-
-    //base case
+    //recursion implementation
     //we are at the end of the list. Begin copying.
+    /*
     if (list->next = NULL)
     {
         Node_t* new_list = (Node_t*)malloc(sizeof(Node_t));
         new_list->next = NULL;
-        new_list->reference = list->reference; // NO NO NO
+        new_list->reference = NULL; //come back and fix this
         return new_list;
     }
 
     //recursively copy the next item in the list
     Node_t* new_list = (Node_t*)malloc(sizeof(Node_t));
     new_list->next = DuplicateList(list->next);
-    new_list->reference = NULL;
-    return new_list;
+    new_list->reference = NULL; //come back and fix this
 
-    DuplicateList();
+    return new_list;
     */
+    
 
     // placeholder
+    /*
     Node_t* new_list = (Node_t*)malloc(sizeof(Node_t));
     new_list->next = NULL;
     new_list->reference = NULL;
     return new_list;
+    */
     
 }
 
