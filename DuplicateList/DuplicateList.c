@@ -71,6 +71,32 @@ static void PrintList(Node_t* list)
 //ASSUMPTION: This is not a circular linked list. The last node must have a next pointer of null.
 static Node_t* DuplicateList(Node_t* list)
 {
+    //sanity check we don't violate
+    if (list == NULL)
+        return NULL; 
+
+    /*
+    Node_t* prevReferenceNode   = NULL;
+    Node_t* prevNode            = NULL;
+
+
+
+    while (list->next != NULL)
+    {
+        //copy next item in list
+
+
+    }
+    //copy the last item in the list
+
+    Node_t* new_list = (Node_t*)malloc(sizeof(Node_t));
+    new_list->next = NULL;
+    new_list->reference = prevReferenceNode; 
+    return new_list;
+
+
+
+
     //base case
     //we are at the end of the list. Begin copying.
     if (list->next = NULL)
@@ -87,13 +113,15 @@ static Node_t* DuplicateList(Node_t* list)
     new_list->reference = NULL;
     return new_list;
 
-    DuplicateList()
+    DuplicateList();
+    */
 
     // placeholder
     Node_t* new_list = (Node_t*)malloc(sizeof(Node_t));
     new_list->next = NULL;
     new_list->reference = NULL;
     return new_list;
+    
 }
 
 int main()
