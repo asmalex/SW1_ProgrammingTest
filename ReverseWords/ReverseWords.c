@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <malloc.h>
 
-// TODO: implement this function '
+//TODO: implement this function '
 //ASSUMPTION: the sentence punctuation at the end needs to stay at the end
 //ASSUMPTION: no double spaces allowed. Use trim() to eliminate
 //ASSUMPTION: only special character is . ? or ! for end of sentence.
@@ -18,8 +18,9 @@ static void ReverseWords(char* string)
     int size = strlen(string);
     int numSpace = 0;
 
+    //result string - add one to size because the strlen function does not count the null terminator
     int* arrSpaceIdx = (int*)malloc(size * sizeof(int));
-    char* result = (char*)malloc(size);
+    char* result = (char*)malloc(size + 1); 
 
     //finds all the spaces in the string and stores their index in the arrSpaceIdx array
     for (int j = size, lastSpace = size,i=0; j>=0; j--)
@@ -32,6 +33,7 @@ static void ReverseWords(char* string)
             result[size] = '\0'; //append the end string character
         }
 
+        //when a space is found, modify the pointer sliding window
         else if (string[j] == ' ')
         {
             arrSpaceIdx[numSpace] = j;
@@ -45,32 +47,19 @@ static void ReverseWords(char* string)
             result[i + bytesToCopy] = ' ';
             i += lastSpace - j;
 
+            //increment number of spaces found, and set the last space to the current index
             numSpace++;
             lastSpace = j;
         }
     }
 
-    //numSpace--;
-    //string copy arrSpaceIdx backwards to next index
-    //for (int j = numSpace-1, endIdx = size; j >= 0; j--)
-    //{
-        //grab the index of the last 
-    //    char* src = string+arrSpaceIdx[j]+1; //address of string + index # of bytes forward
-    //    memcpy(result, src, endIdx - arrSpaceIdx[j]);
-    //}
-
-    //copy the first word to end
-    //if (numSpace != 0)
-    //    memcpy(result + arrSpaceIdx[numSpace - 1], string, arrSpaceIdx[0]);
-    //else
-    //    memcpy(result, string, size+1); //there are no spaces, copy whole word
-
     //reassign
-    strcpy(string, result);
+    memcpy(string, result, size);
 
 
-    //FIX mem leak
-    //free(result);
+    //release memory
+    free(arrSpaceIdx);
+    free(result);
 
 }
 
