@@ -175,7 +175,7 @@ int main()
     Note: when implementing please consider arbitrary input lists other than the one generated.
     A different random list can be set by changing the seed to srand() and changing number of nodes in the list.
     */
-    srand(5);
+    srand(3);
 
     Node_t* list = GenerateList(1);
 
