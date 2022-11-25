@@ -5,10 +5,11 @@
 #include <assert.h>
 #include <malloc.h>
 
-//TODO: implement this function '
+//TODO: implement this function
 //ASSUMPTION: the sentence punctuation at the end needs to stay at the end
-//ASSUMPTION: no double spaces allowed. Use trim() to eliminate
-//ASSUMPTION: only special character is . ? or ! for end of sentence.
+//ASSUMPTION: multiple spaces are preserved, but there is always one space after a word
+//ASSUMPTION: punctuation positions are preserved with the words
+//FUTURE WORK: Move . ! or ? punctuation to the end of the sentence
 static void ReverseWords(char* string)
 {
     //split the words by whitespace
@@ -53,7 +54,7 @@ static void ReverseWords(char* string)
         }
     }
 
-    //reassign
+    //move copy result to the string
     memcpy(string, result, size);
 
 
