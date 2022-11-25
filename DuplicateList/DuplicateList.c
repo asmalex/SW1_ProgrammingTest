@@ -71,32 +71,60 @@ static void PrintList(Node_t* list)
 //ASSUMPTION: This is not a circular linked list. The last node must have a next pointer of null.
 static Node_t* DuplicateList(Node_t* list)
 {
-    Node_t* head = NULL;
-    Node_t* prevReferenceNode = NULL;
-    Node_t* prevNode = NULL;
+    Node_t* head = list;
+    //Node_t* prevReferenceNode = NULL;
+    //Node_t* prevNode = NULL;
 
-    //sanity check we don't violate
+    //sanity check we don't violate memory
+    //TO DO: this may not be necessary
     if (list == NULL)
-        return head; 
+        return NULL;
 
     //solve the trivial problem of copying the nodes
-    Node_t* new_list            = (Node_t*)malloc(sizeof(Node_t));
-    new_list->next              = NULL;
-    new_list->reference         = NULL;
-    head = new_list;
+    //place the nodes inline
+    //Node_t* new_list            = (Node_t*)malloc(sizeof(Node_t));
+    //new_list->next              = NULL;
+    //new_list->reference         = NULL;
+
     while (list != NULL)
     {
-        //copy next item in list
-        new_list->next          = (Node_t*)malloc(sizeof(Node_t));
-        new_list                = new_list->next;
+        //create a new node
+        Node_t* new_list = (Node_t*)malloc(sizeof(Node_t));
+        new_list->next = list->next; //re-route this node to next node
+        //this is the tricky part. We are going to come back and traverse these nodes to fill them in
+        new_list->reference = NULL;
 
-        new_list->next          = NULL;
-        new_list->reference     = NULL;
-
-        list = list->next; //move to the next node
+        list->next = new_list; //re-route prior node to this
+        list = new_list->next; //increment to the next node
     }
 
-    //next let's walk through and assign a number to each node
+    //reset list back to head node
+    list = head;
+
+    //set head to second node, which is the head of the new list
+    head = list->next;
+    return list;
+
+    //walk through the list, seperate the links, and link the random nodes
+    while (list != NULL)
+    {
+        Node_t* new_list;
+        //unzipper using the next node
+        new_list = list->next;
+
+        //first we resolve the random pointer
+        //find the random node in the original list, then go to the next node to find it's copy
+        //else condition is not needed, since the reference is already set to NULL
+        if(list->reference != NULL)
+            new_list->reference = (list->reference)->next; 
+
+        //stitch back the original list:
+        list->next = (list->next)->next;
+
+        //stitch back the duplicate list:
+        if(new_list->next != NULL)
+            new_list->next = (new_list->next)->next;
+    }
 
     return head;
 
