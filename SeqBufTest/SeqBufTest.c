@@ -34,6 +34,7 @@ typedef struct SequenceBuffer_s
     //double-linked list to store sequence items
     Node_t* head;
     Node_t* list;
+    Node_t* current;
 
     uint32_t maxSeq;
     char tmp;
@@ -52,7 +53,7 @@ static void SequenceBuffer_Init(SequenceBuffer_t* seqBuf)
     int t;
     t = pthread_mutex_init(&seqBuf->mutex, NULL);
     printf("Initialized the mutex returned %d \n", t);
-    seqBuf->list = seqBuf->head = NULL;
+    seqBuf->list = seqBuf->head = seqBuf->current = NULL;
 }
 
 // TODO: implement this function
@@ -68,16 +69,20 @@ static void SequenceBuffer_Push(SequenceBuffer_t* seqBuf, const char* string, ui
         Sleep(50);
     }
 
-    printf("Sequence %d locked mutex with code %d \n", seq, t);
+   //printf("Sequence %d locked mutex with code %d \n", seq, t);
 
     //if this is the first item in our list, set head and set list to 1st element
     if (seqBuf->list == NULL)
+    {
         seqBuf->list = seqBuf->head = (Node_t*)malloc(sizeof(Node_t));
+        seqBuf->list->prev = NULL; //the head node has no previous by definition
+    }
     else
     {
         //push the next item onto the list and increment list to next node
         seqBuf->list->next = (Node_t*)malloc(sizeof(Node_t));
-        seqBuf->list = seqBuf->list->next;
+        seqBuf->list->next->prev = seqBuf->list; //set the previous of the next node to the current node
+        seqBuf->list = seqBuf->list->next;      //increment the current node
     }
 
     //finally, assign the sequence at the text
@@ -86,8 +91,6 @@ static void SequenceBuffer_Push(SequenceBuffer_t* seqBuf, const char* string, ui
 
     //set the next item to NULL
     seqBuf->list->next = NULL;
-    //FIX THIS
-    seqBuf->list->prev = NULL;
     //seqBuf->list = seqBuf->list->next;
     
     //demonstration of ternary operator
@@ -95,8 +98,8 @@ static void SequenceBuffer_Push(SequenceBuffer_t* seqBuf, const char* string, ui
     seqBuf->maxSeq = (seq > seqBuf->maxSeq) ? seq : seqBuf->maxSeq;
 
     t = pthread_mutex_unlock(&seqBuf->mutex);
-    printf("Sequence %d unlocked mutex with code %d \n", seq, t);
-    printf("Added sequence %d with text %s \n", seq, string);
+    //printf("Sequence %d unlocked mutex with code %d \n", seq, t);
+    //printf("Added sequence %d with text %s \n", seq, string);
 }
 
 // TODO: implement this function
@@ -106,11 +109,16 @@ static void SequenceBuffer_Pop(SequenceBuffer_t* seqBuf, char outputString[SEQ_B
     //lock the buffer
     //sort the sequences
 
-    Node_t* current = seqBuf->head;
+    if(seqBuf->current == NULL)
+        seqBuf->current = seqBuf->head;
+
+    Node_t* current = seqBuf->current;
+
+    strcpy(outputString,"");
     //to start: just pop off the linked list in order for now
 
     int t = pthread_mutex_lock(&seqBuf->mutex);
-    printf("Locked pop with mutex returned code %d \n", t);
+    //printf("Locked pop with mutex returned code %d \n", t);
     if (t != 0)
         printf("Unable to lock Pop thread with error code %d \n", t);
 
@@ -122,14 +130,14 @@ static void SequenceBuffer_Pop(SequenceBuffer_t* seqBuf, char outputString[SEQ_B
         return;
     }
     */
-
-    while (seqBuf->head != NULL)
+    //initial implementation, searches through the whole set
+    while (current != NULL)
     {
         //see if the current item is greater than last item
-        if (current->seq > lastItem)
+        if (current->seq == (lastItem+1))
         {
             lastItem = current->seq;
-            strcpy(outputString, seqBuf->head->seqText);
+            strcpy(outputString, current->seqText);
             break;
         }
         current = current->next;
@@ -139,7 +147,7 @@ static void SequenceBuffer_Pop(SequenceBuffer_t* seqBuf, char outputString[SEQ_B
     //seqBuf->head = seqBuf->head->next;
 
     t= pthread_mutex_unlock(&seqBuf->mutex);
-    printf("Unlocked pop with code %d \n", t);
+    //printf("Unlocked pop with code %d \n", t);
 
     //perhaps to start we can begin a loop - but how do we know what the largest number is?
     //
@@ -288,6 +296,7 @@ int main()
     SequenceBuffer_t seq_buf;
     SequenceBuffer_Init(&seq_buf);
 
+    /*
     SequenceBuffer_Push(&seq_buf, "item1", 1);
     SequenceBuffer_Push(&seq_buf, "item2", 2);
     SequenceBuffer_Push(&seq_buf, "item3", 3);
@@ -311,13 +320,13 @@ int main()
     printf("Pop Returned: %s", output);
     SequenceBuffer_Pop(&seq_buf, output);
     printf("Pop Returned: %s", output);
-
+    */
 
     //come back to this later
-    //int32_t ret1 = pthread_create(&thread1, NULL, PushThread, &seq_buf);
+    int32_t ret1 = pthread_create(&thread1, NULL, PushThread, &seq_buf);
     //assert(ret1 == 0);
 
-    //int32_t ret2 = pthread_create(&thread2, NULL, PopThread, &seq_buf);
+    int32_t ret2 = pthread_create(&thread2, NULL, PopThread, &seq_buf);
     //assert(ret2 == 0);
 
     // done
