@@ -10,7 +10,7 @@ namespace UnitTestDuplicateList
 	{
 	public:
 
-		//null poiiner
+		//null pointer
 		TEST_METHOD(DuplicateList_NullPointer_NullPointer)
 		{
 			Node_t* result;
