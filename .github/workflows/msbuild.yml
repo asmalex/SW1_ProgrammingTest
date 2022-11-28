@@ -1,5 +1,5 @@
 #Automate CI/CD pipeline to make development easier
-name: Build_and_Test
+name: Build and Test
 
 on:
   push:
