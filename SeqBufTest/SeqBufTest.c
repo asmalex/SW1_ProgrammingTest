@@ -12,26 +12,86 @@
 
 static uint32_t g_done = 0;
 
+// Doubly Linked List Node
+typedef struct Node_s
+{
+    struct Node_s* next;        // points to next node in the list
+    struct Node_s* prev;        // points to previous node in the list
+    uint32_t seq;
+    char seqText[SEQ_BUFFER_STRING_MAX];
+} Node_t;
+
 // Sequence Buffer definition
+//ASSUMPTION: Sequences are more-or-less in order. (not more than 5 out of order)
 typedef struct SequenceBuffer_s
 {
     // TODO: add members as needed here
+    // TODO: add a mutex
+
+    //double-linked list to store sequence items
+    Node_t* head;
+    Node_t* list;
+
+    uint32_t maxSeq;
     char tmp;
+    pthread_mutex_t mutex;
+
 } SequenceBuffer_t;
+
+
 
 // TODO: implement this function
 static void SequenceBuffer_Init(SequenceBuffer_t* seqBuf)
 {
+    seqBuf->mutex = PTHREAD_MUTEX_INITIALIZER;
+    seqBuf->list = seqBuf->head = NULL;
 }
 
 // TODO: implement this function
+//non-blocking thread safe
 static void SequenceBuffer_Push(SequenceBuffer_t* seqBuf, const char* string, uint32_t seq)
 {
+
+    int t = pthread_mutex_trylock(seqBuf->mutex);
+    while (t == EBUSY)
+    {
+        //do something here
+        printf("Thread is busy at sequence %d \n", seq);
+    }
+
+    //if this is the first item in our list, set head and set list to 1st element
+    if (seqBuf->list == NULL)
+        seqBuf->list = seqBuf->head = (Node_t*)malloc(sizeof(Node_t));
+    else
+    {
+        //push the next item onto the list and increment list to next node
+        seqBuf->list->next = (Node_t*)malloc(sizeof(Node_t));
+        seqBuf->list = seqBuf->list->next;
+    }
+
+    //finally, assign the sequence at the text
+    seqBuf->list->seq = seq;
+    seqBuf->list->seqText = string;
+    
+    //demonstration of ternary operator
+    //update maxSeq if current sequence is greater than max
+    seqBuf->maxSeq = (seq > seqBuf->maxSeq) ? seq : seqBuf->maxSeq;
+
+    t = pthread_mutex_unlock(seqBuf->mutex);
+    printf("Sequence %d unlocked mutex with code %d \n", seq, t);
 }
 
 // TODO: implement this function
+// blocking thread-safe
 static void SequenceBuffer_Pop(SequenceBuffer_t* seqBuf, char outputString[SEQ_BUFFER_STRING_MAX])
 {
+    //lock the buffer
+    //sort the sequences
+
+    //perhaps to start we can begin a loop - but how do we know what the largest number is?
+
+    //
+
 }
 
 // return a random number in the specified range
