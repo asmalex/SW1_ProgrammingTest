@@ -9,9 +9,10 @@
 #include <Windows.h>
 
 #define SEQ_BUFFER_STRING_MAX   (32)
+#define SEQ_SEARCH_RADIUS_MAX   (50)
+#define DEBUG                   (1)
 
 static uint32_t g_done = 0;
-static uint32_t lastItem = 0;
 
 // Doubly Linked List Node
 //ASSUMPTION: sequences are ints > 0
@@ -25,23 +26,33 @@ typedef struct Node_s
 } Node_t;
 
 // Sequence Buffer definition
-//ASSUMPTION: Sequences are more-or-less in order. (not more than 5 out of order)
+//ASSUMPTION: Sequences are not more than 5 out of order (it seems they are)
 typedef struct SequenceBuffer_s
 {
-    // TODO: add members as needed here
-    // TODO: add a mutex
-
     //double-linked list to store sequence items
     Node_t* head;
-    Node_t* list;
+    Node_t* last;
     Node_t* current;
 
     uint32_t maxSeq;
-    char tmp;
     pthread_mutex_t mutex;
 
 } SequenceBuffer_t;
 
+
+// Print the list
+static void PrintList(Node_t* list)
+{
+    uint32_t count = 0;
+    while (list != NULL)
+    {
+        printf("Node %i [#%s]: me(%p), next(%p), prev(%p)\n", count, list->seqText, list, list->next, list->prev);
+        list = list->next;
+
+        ++count;
+    }
+    printf("Printed %d nodes\n", count);
+}
 
 
 // TODO: implement this function
@@ -53,66 +64,136 @@ static void SequenceBuffer_Init(SequenceBuffer_t* seqBuf)
     int t;
     t = pthread_mutex_init(&seqBuf->mutex, NULL);
     printf("Initialized the mutex returned %d \n", t);
-    seqBuf->list = seqBuf->head = seqBuf->current = NULL;
+    seqBuf->last = seqBuf->head = seqBuf->current = NULL;
 }
 
 // TODO: implement this function
 //non-blocking thread safe
 static void SequenceBuffer_Push(SequenceBuffer_t* seqBuf, const char* string, uint32_t seq)
 {
+    //Sanity check that seqBuf is not null
+    if (seqBuf == NULL)
+    {
+        printf("ERROR: SeqBuf in SequenceBuffer_Push() was NULL!");
+        return;
+    }
 
     int t = pthread_mutex_lock(&seqBuf->mutex);
     while (t == EBUSY)
     {
-        //do something here
-        printf("Thread is busy at sequence %d \n", seq);
+        #ifdef DEBUG
+            printf("Thread is busy at sequence %d \n", seq);
+        #endif // DEBUG
         Sleep(50);
     }
 
-   //printf("Sequence %d locked mutex with code %d \n", seq, t);
+    #ifdef DEBUG
+    printf("Sequence %d locked mutex with code %d \n", seq, t);
+    #endif // DEBUG
 
     //if this is the first item in our list, set head and set list to 1st element
-    if (seqBuf->list == NULL)
+    if (seqBuf->last == NULL)
     {
-        seqBuf->list = seqBuf->head = (Node_t*)malloc(sizeof(Node_t));
-        seqBuf->list->prev = NULL; //the head node has no previous by definition
+        seqBuf->last = seqBuf->head = (Node_t*)malloc(sizeof(Node_t));
+        seqBuf->last->prev = NULL;                  //the head node has no previous by definition
     }
     else
     {
-        //push the next item onto the list and increment list to next node
-        seqBuf->list->next = (Node_t*)malloc(sizeof(Node_t));
-        seqBuf->list->next->prev = seqBuf->list; //set the previous of the next node to the current node
-        seqBuf->list = seqBuf->list->next;      //increment the current node
+        //add the next item onto the list and increment list to next node
+        seqBuf->last->next = (Node_t*)malloc(sizeof(Node_t));
+        seqBuf->last->next->prev = seqBuf->last;    //set the previous of the next node to the current node
+        seqBuf->last = seqBuf->last->next;          //increment the current node
     }
 
-    //finally, assign the sequence at the text
-    seqBuf->list->seq = seq;
-    strcpy(seqBuf->list->seqText, string);
+    //finally, assign the new last sequence to the text
+    seqBuf->last->seq = seq;
+    strcpy(seqBuf->last->seqText, string);
 
     //set the next item to NULL
-    seqBuf->list->next = NULL;
-    //seqBuf->list = seqBuf->list->next;
+    seqBuf->last->next = NULL;
     
     //demonstration of ternary operator
     //update maxSeq if current sequence is greater than max
     seqBuf->maxSeq = (seq > seqBuf->maxSeq) ? seq : seqBuf->maxSeq;
 
     t = pthread_mutex_unlock(&seqBuf->mutex);
-    //printf("Sequence %d unlocked mutex with code %d \n", seq, t);
-    //printf("Added sequence %d with text %s \n", seq, string);
+    if (t != 0)
+    {
+        printf("ERROR: Unlock mutex failed at SequenceBuffer_Push() returned code %d", t);
+        return;
+    }
+
+
+    #ifdef DEBUG
+    printf("Sequence %d unlocked mutex with code %d \n", seq, t);
+    printf("Added sequence %d with text %s \n", seq, string);
+    #endif //DEBUG
+}
+
+//a helper function 
+//RETRUNS: a pointer to the next item in the sequence (or null if not found)
+static Node_t* SearchNextNode(Node_t* list, const int expectedResult, const int maxSearchRadius)
+{
+    Node_t* forward  = list->next;
+    Node_t* backward = list->prev;
+
+    //search forwards and backwards simultaniously
+    for (int i = 0; i < maxSearchRadius; i++)
+    {
+        //check backwards
+        if (backward != NULL)
+        {
+            if (backward->seq == expectedResult)
+                return backward;
+
+            //go back a node and repeat
+            backward = backward->prev;
+        }
+
+        //check forwards
+        if (forward != NULL)
+        {
+            if (forward->seq == expectedResult)
+                return (forward);
+
+            //go forwards a node and repeat
+            forward = forward->next;
+        }
+
+        if (backward == NULL && forward == NULL)
+            break; //end the search, this node does not exist
+    }
+
+    //if we made it here it means we exhausted our search, but didn't find the next item in the sequence
+    return NULL;
 }
 
 // TODO: implement this function
 // blocking thread-safe
 static void SequenceBuffer_Pop(SequenceBuffer_t* seqBuf, char outputString[SEQ_BUFFER_STRING_MAX])
 {
-    //lock the buffer
-    //sort the sequences
+    //Sanity check that seqBuf is not null
+    if (seqBuf == NULL)
+    {
+        printf("ERROR: SeqBuf in SequenceBuffer_Pop() was NULL!");
+        return;
+    }
 
-    if(seqBuf->current == NULL)
-        seqBuf->current = seqBuf->head;
+    //next check that current is not null, and if so, retieve the very first item
+    if (seqBuf->current == NULL)
+    {
+        //and we check we have at least 1 item
+        if (seqBuf->head != NULL)
+        {
+            //retrieve the first item
+            pthread_mutex_lock(&seqBuf->mutex);
+            seqBuf->current = seqBuf->head;
+            strcpy(outputString, seqBuf->current->seqText);
+            pthread_mutex_unlock(&seqBuf->mutex);
+        }
 
-    Node_t* current = seqBuf->current;
+        return;
+    }
 
     strcpy(outputString,"");
     //to start: just pop off the linked list in order for now
@@ -122,36 +203,63 @@ static void SequenceBuffer_Pop(SequenceBuffer_t* seqBuf, char outputString[SEQ_B
     if (t != 0)
         printf("Unable to lock Pop thread with error code %d \n", t);
 
-    /*
-    if (seqBuf->head == NULL)
-    {
-        t = pthread_mutex_unlock(&seqBuf->mutex);
-        printf("NOTHING: Unlocked pop with code %d \n", t);
-        return;
-    }
-    */
     //initial implementation, searches through the whole set
-    while (current != NULL)
+    if (seqBuf->current != NULL)
     {
-        //see if the current item is greater than last item
-        if (current->seq == (lastItem+1))
+        //if there aren't any more nodes since the last node reported, just yield to the OS.
+        while (seqBuf->current->seq == seqBuf->maxSeq)
         {
-            lastItem = current->seq;
-            strcpy(outputString, current->seqText);
-            break;
+            t = pthread_mutex_unlock(&seqBuf->mutex);
+            if (t != 0)
+                printf("Unable to lock Pop thread with error code %d \n", t);
+
+            t = sched_yield(); //try yielding to see if that changes the situation
+            Sleep(50);
+            //printf("Scheduled yield returned code %d \n", t);
+
+            //now relock the mutex and proceed:
+
+            int t = pthread_mutex_lock(&seqBuf->mutex);
+            //printf("Yielded and relocked pop with mutex returned code %d \n", t);
+
+            if (t != 0)
+                printf("Unable to lock Pop thread after yield with error code %d \n", t);
+        }// END WHILE
+
+
+        //at this point we know theres a node greater than current, but we don't know if its valid
+        //use the search helper function to try to find the location of the next node
+        int expectedNode = seqBuf->current->seq + 1;
+        Node_t* nextSeqNode = SearchNextNode(seqBuf->current, expectedNode, SEQ_SEARCH_RADIUS_MAX);
+
+        //at this point, current either is the location of the next sequence
+        //or the next sequence simply does not exist yet...
+        if (nextSeqNode != NULL)
+        {
+            //set the current node to the node we found
+            seqBuf->current = nextSeqNode;
+
+            //copy the result to the string
+            strcpy(outputString, seqBuf->current->seqText);
         }
-        current = current->next;
-    }
+        else
+            printf("We have a problem\n");
+        /*
+        if ((seqBuf->current->seq % 10) == 0) //for every 10 items...
+        {
+            printf("Head %p | List %p | Current %p | MaxSeq %d\n", seqBuf->head, seqBuf->list, seqBuf->current, seqBuf->maxSeq);
+            PrintList(seqBuf->head);
+        }*/
 
-    //strcpy(outputString, seqBuf->head->seqText);
-    //seqBuf->head = seqBuf->head->next;
+    } //END IF
 
+
+    //unlock the mutex and report errors to console
     t= pthread_mutex_unlock(&seqBuf->mutex);
-    //printf("Unlocked pop with code %d \n", t);
-
-    //perhaps to start we can begin a loop - but how do we know what the largest number is?
-    //
-
+    if (t != 0)
+    {
+        printf("Problem unlocking mutex in SequenceBuffer_Pop() with code %d \n", t);
+    }
 }
 
 // return a random number in the specified range
@@ -291,43 +399,24 @@ int main()
 
     pthread_t thread1;
     pthread_t thread2;
+    pthread_t thread3;
+    pthread_t thread4;
     char* output[SEQ_BUFFER_STRING_MAX] = { 0 };
 
     SequenceBuffer_t seq_buf;
     SequenceBuffer_Init(&seq_buf);
 
-    /*
-    SequenceBuffer_Push(&seq_buf, "item1", 1);
-    SequenceBuffer_Push(&seq_buf, "item2", 2);
-    SequenceBuffer_Push(&seq_buf, "item3", 3);
-    SequenceBuffer_Push(&seq_buf, "item4", 4);
-    SequenceBuffer_Push(&seq_buf, "item4", 4);   // duplicate
-    SequenceBuffer_Push(&seq_buf, "item6", 6);   // out of order
-    SequenceBuffer_Push(&seq_buf, "item5", 5);   // out of order
-    SequenceBuffer_Push(&seq_buf, "item7", 7);
-
-    SequenceBuffer_Pop(&seq_buf, output);
-    printf("Pop Returned: %s", output);
-    SequenceBuffer_Pop(&seq_buf, output);
-    printf("Pop Returned: %s", output);
-    SequenceBuffer_Pop(&seq_buf, output);
-    printf("Pop Returned: %s", output);
-    SequenceBuffer_Pop(&seq_buf, output);
-    printf("Pop Returned: %s", output);
-    SequenceBuffer_Pop(&seq_buf, output);
-    printf("Pop Returned: %s", output);
-    SequenceBuffer_Pop(&seq_buf, output);
-    printf("Pop Returned: %s", output);
-    SequenceBuffer_Pop(&seq_buf, output);
-    printf("Pop Returned: %s", output);
-    */
-
-    //come back to this later
     int32_t ret1 = pthread_create(&thread1, NULL, PushThread, &seq_buf);
-    //assert(ret1 == 0);
+    assert(ret1 == 0);
 
     int32_t ret2 = pthread_create(&thread2, NULL, PopThread, &seq_buf);
-    //assert(ret2 == 0);
+    assert(ret2 == 0);
+
+    //int32_t ret3 = pthread_create(&thread3, NULL, PushThread, &seq_buf);
+    //assert(ret3 == 0);
+
+    //int32_t ret4 = pthread_create(&thread4, NULL, PopThread, &seq_buf);
+    //assert(ret4 == 0);
 
     // done
     printf("\nPress ESC to finish...\n");
