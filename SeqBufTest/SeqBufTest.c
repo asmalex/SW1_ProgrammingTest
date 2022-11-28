@@ -43,7 +43,12 @@ typedef struct SequenceBuffer_s
 // TODO: implement this function
 static void SequenceBuffer_Init(SequenceBuffer_t* seqBuf)
 {
+    seqBuf->maxSeq = 0;
     seqBuf->mutex = PTHREAD_MUTEX_INITIALIZER;
+
+    int t;
+    t = pthread_mutex_init(&seqBuf->mutex, NULL);
+    printf("Initialized the mutex returned %d \n", t);
     seqBuf->list = seqBuf->head = NULL;
 }
 
@@ -52,12 +57,14 @@ static void SequenceBuffer_Init(SequenceBuffer_t* seqBuf)
 static void SequenceBuffer_Push(SequenceBuffer_t* seqBuf, const char* string, uint32_t seq)
 {
 
-    int t = pthread_mutex_trylock(seqBuf->mutex);
+    int t = pthread_mutex_trylock(&seqBuf->mutex);
     while (t == EBUSY)
     {
         //do something here
         printf("Thread is busy at sequence %d \n", seq);
     }
+
+    printf("Sequence %d locked mutex with code %d \n", seq, t);
 
     //if this is the first item in our list, set head and set list to 1st element
     if (seqBuf->list == NULL)
@@ -71,13 +78,18 @@ static void SequenceBuffer_Push(SequenceBuffer_t* seqBuf, const char* string, ui
 
     //finally, assign the sequence at the text
     seqBuf->list->seq = seq;
-    seqBuf->list->seqText = string;
+    strcpy(seqBuf->list->seqText, string);
+
+    //set the next item to NULL
+    seqBuf->list->next = NULL;
+    //FIX THIS
+    seqBuf->list->prev = NULL;
     
     //demonstration of ternary operator
     //update maxSeq if current sequence is greater than max
     seqBuf->maxSeq = (seq > seqBuf->maxSeq) ? seq : seqBuf->maxSeq;
 
-    t = pthread_mutex_unlock(seqBuf->mutex);
+    t = pthread_mutex_unlock(&seqBuf->mutex);
     printf("Sequence %d unlocked mutex with code %d \n", seq, t);
 }
 
@@ -88,8 +100,26 @@ static void SequenceBuffer_Pop(SequenceBuffer_t* seqBuf, char outputString[SEQ_B
     //lock the buffer
     //sort the sequences
 
-    //perhaps to start we can begin a loop - but how do we know what the largest number is?
+    //to start: just pop off the linked list in order.
 
+
+    int t = pthread_mutex_lock(&seqBuf->mutex);
+    printf("Locked pop with mutex returned code %d \n", t);
+
+    if (seqBuf->head == NULL)
+    {
+        t = pthread_mutex_unlock(&seqBuf->mutex);
+        printf("Unlocked pop with code %d \n", t);
+        return;
+    }
+
+    strcpy(outputString, seqBuf->head->seqText);
+    seqBuf->head->next;
+
+    t= pthread_mutex_unlock(&seqBuf->mutex);
+    printf("Unlocked pop with code %d \n", t);
+
+    //perhaps to start we can begin a loop - but how do we know what the largest number is?
     //
 
 }
