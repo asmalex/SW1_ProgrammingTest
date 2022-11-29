@@ -57,7 +57,7 @@ Sequences are stored in a doubly-linked list. The list contains:
 NOTE: Pop() reads the buffer and increments the current pointer, it does not remove elements from the buffer. Preserving the buffer may have value in the future. In a test run with 10,000 sequences, this implementation uses only 10.3MB. 
 
 #### Alternate Implementations
-Because order of sequences is not guaranteed, you may have to wait for the next sequence to be generated. Implementing a semaphore signaling mechanism for the Pop() thread might be more elegant than the current yeild_thread() implementation. 
+Because order of sequences is not guaranteed, you may have to wait for the next sequence to be generated. Implementing a semaphore signaling mechanism for the Pop() thread might be more elegant than the current yield_thread() implementation. 
 
 ## Installation
 * Clone contents into your project dev folder.
