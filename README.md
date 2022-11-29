@@ -4,7 +4,7 @@
 
 This repo will automatically trigger an MSBuild and execute 8 unit tests against anything checked into the main branch. There are three sub-problems: Duplicate List, Sequence Buffer, and Reverse Words. A description of the sub-problems and their solutions (as well as alternate implementions in various branches) is documented below:
 
-## Reverse Words
+## Reverse Words (109 LOC)
 Reverses the words of a sentence - preserving whitespace and punctuation.
 
 #### How it Works
@@ -27,7 +27,7 @@ Input String| Expected Result
 "Sierra Nevada Corporation. Or SNC." | "SNC. Or Corporation. Nevada Sierra"
 
 
-## Duplicate List
+## Duplicate List (245 LOC)
 Produces a deep-copy of a linked list, preserving relationships in the deep-copy.
 
 #### How it Works
@@ -45,8 +45,7 @@ Using a dictionary, it would be possible to create a deep-copy in 2 passes:
 The branch Reversestring_Loop contains code for this implementation, and while it was my original approach, it was abandoned in favor or the simpler implementation documented above.
 
 
-
-## Sequence Buffer
+## Sequence Buffer (540 LOC)
 Producer / Consumer concurrency problem using two threads: a producer thread which adds to the buffer, and a consumer thread which reads the buffer.
 
 #### How it Works
