@@ -61,11 +61,11 @@ NOTE: Pop() reads the buffer and increments the current pointer, it does not rem
 Because order of sequences is not guaranteed, you may have to wait for the next sequence to be generated. Implementing a semaphore signaling mechanism for the Pop() thread might be more elegant than the current yeild_thread() implementation. 
 
 ## Installation
-•	Clone contents into your project dev folder.
-•	Build project (Cntr+Shift+B)
-•	That's it!
-•	To run a unit test locally on VS 2019 can be done from the menu select Window - > General -> Test Explorer
-•	You should see the unit tests in the test explorer. You can run a unit test by double-clicking it
+* Clone contents into your project dev folder.
+* Build project (Cntr+Shift+B)
+* That's it!
+* To run a unit test locally on VS 2019 can be done from the menu select Window - > General -> Test Explorer
+* You should see the unit tests in the test explorer. You can run a unit test by double-clicking it
 
 Note: this was tested on Visual Studio 2019 Version 16.11.5 on Windows 10 v10.0.19044. It'll likely work on other versions as well. 
 
