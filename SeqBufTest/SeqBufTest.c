@@ -10,7 +10,11 @@
 
 #define SEQ_BUFFER_STRING_MAX   (32)
 #define SEQ_SEARCH_RADIUS_MAX   (50)
-#define DEBUG                   (1)
+
+// Set to 0 to disable console output
+// Set to 1 for logging mutex activity on console
+// Set to 2 for enhanced debugging / printing the linked list before and after each operation
+#define DEBUG                   (0) 
 
 static uint32_t g_done = 0;
 
@@ -51,7 +55,9 @@ static void PrintList(Node_t* list)
 
         ++count;
     }
+    #if DEBUG > 2
     printf("Printed %d nodes\n", count);
+    #endif
 }
 
 
@@ -81,13 +87,21 @@ static void SequenceBuffer_Push(SequenceBuffer_t* seqBuf, const char* string, ui
     int t = pthread_mutex_lock(&seqBuf->mutex);
     while (t == EBUSY)
     {
-        #ifdef DEBUG
+        #if DEBUG > 0
             printf("Thread is busy at sequence %d \n", seq);
         #endif // DEBUG
         Sleep(50);
     }
 
-    #ifdef DEBUG
+    #if DEBUG > 1 
+    printf("BEGIN PUSH() FUNCTION \n");
+    printf("Head %p | Last %p | Current %p | MaxSeq %d\n", seqBuf->head, seqBuf->last, seqBuf->current, seqBuf->maxSeq);
+    PrintList(seqBuf->head);
+    #endif // DEBUG LINKED LIST
+
+
+
+    #if DEBUG > 0
     printf("Sequence %d locked mutex with code %d \n", seq, t);
     #endif // DEBUG
 
@@ -116,18 +130,23 @@ static void SequenceBuffer_Push(SequenceBuffer_t* seqBuf, const char* string, ui
     //update maxSeq if current sequence is greater than max
     seqBuf->maxSeq = (seq > seqBuf->maxSeq) ? seq : seqBuf->maxSeq;
 
+    #if DEBUG > 0       //mutex troubleshooting
+    printf("Sequence %d unlocked mutex with code %d \n", seq, t);
+    printf("Added sequence %d with text %s \n", seq, string);
+    #endif //DEBUG MUTEX
+
+    #if DEBUG > 1 
+    printf("AFTER PUSH() FUNCTION \n");
+    printf("Head %p | Last %p | Current %p | MaxSeq %d\n", seqBuf->head, seqBuf->last, seqBuf->current, seqBuf->maxSeq);
+    PrintList(seqBuf->head);
+    #endif // DEBUG LINKED LIST
+
     t = pthread_mutex_unlock(&seqBuf->mutex);
     if (t != 0)
     {
         printf("ERROR: Unlock mutex failed at SequenceBuffer_Push() returned code %d", t);
         return;
     }
-
-
-    #ifdef DEBUG
-    printf("Sequence %d unlocked mutex with code %d \n", seq, t);
-    printf("Added sequence %d with text %s \n", seq, string);
-    #endif //DEBUG
 }
 
 //a helper function 
@@ -179,7 +198,8 @@ static void SequenceBuffer_Pop(SequenceBuffer_t* seqBuf, char outputString[SEQ_B
         return;
     }
 
-    //next check that current is not null, and if so, retieve the very first item
+    //sanity check that current is not null
+    //if it is, try to retieve the very first item
     if (seqBuf->current == NULL)
     {
         //and we check we have at least 1 item
@@ -192,18 +212,18 @@ static void SequenceBuffer_Pop(SequenceBuffer_t* seqBuf, char outputString[SEQ_B
             pthread_mutex_unlock(&seqBuf->mutex);
         }
 
+        //if current is null, and head is null, this means our list is empty.
+        //wait for next sequence to be added
         return;
     }
 
-    strcpy(outputString,"");
-    //to start: just pop off the linked list in order for now
-
+    strcpy(outputString, "");
     int t = pthread_mutex_lock(&seqBuf->mutex);
     //printf("Locked pop with mutex returned code %d \n", t);
     if (t != 0)
-        printf("Unable to lock Pop thread with error code %d \n", t);
+        printf("ERROR: Unable to lock mutex in SequenceBuffer_Pop() with error code %d \n", t);
 
-    //initial implementation, searches through the whole set
+
     if (seqBuf->current != NULL)
     {
         //if there aren't any more nodes since the last node reported, just yield to the OS.
@@ -211,19 +231,21 @@ static void SequenceBuffer_Pop(SequenceBuffer_t* seqBuf, char outputString[SEQ_B
         {
             t = pthread_mutex_unlock(&seqBuf->mutex);
             if (t != 0)
-                printf("Unable to lock Pop thread with error code %d \n", t);
+                printf("ERROR: Unable to lock mutex in SequenceBuffer_Pop() with error code %d \n", t);
 
             t = sched_yield(); //try yielding to see if that changes the situation
             Sleep(50);
-            //printf("Scheduled yield returned code %d \n", t);
+
+            #if DEBUG > 1
+            printf("Scheduled yield returned code %d \n", t);
+            #endif // DEBUG
 
             //now relock the mutex and proceed:
 
             int t = pthread_mutex_lock(&seqBuf->mutex);
-            //printf("Yielded and relocked pop with mutex returned code %d \n", t);
-
             if (t != 0)
-                printf("Unable to lock Pop thread after yield with error code %d \n", t);
+                printf("ERROR: Unable to unlock mutex in SequenceBuffer_Pop() after yield with error code %d \n", t);
+
         }// END WHILE
 
 
@@ -243,13 +265,14 @@ static void SequenceBuffer_Pop(SequenceBuffer_t* seqBuf, char outputString[SEQ_B
             strcpy(outputString, seqBuf->current->seqText);
         }
         else
-            printf("We have a problem\n");
-        /*
-        if ((seqBuf->current->seq % 10) == 0) //for every 10 items...
         {
-            printf("Head %p | List %p | Current %p | MaxSeq %d\n", seqBuf->head, seqBuf->list, seqBuf->current, seqBuf->maxSeq);
+            #if DEBUG > 1
+            printf("We searched the array and were not able to find the next sequence \n");
+            printf("Going to yield until the next node shows up. Below is a dump of the linked list \n");
+            printf("Head %p | Last %p | Current %p | MaxSeq %d\n", seqBuf->head, seqBuf->last, seqBuf->current, seqBuf->maxSeq);
             PrintList(seqBuf->head);
-        }*/
+            #endif // DEBUG
+        }
 
     } //END IF
 
@@ -258,8 +281,10 @@ static void SequenceBuffer_Pop(SequenceBuffer_t* seqBuf, char outputString[SEQ_B
     t= pthread_mutex_unlock(&seqBuf->mutex);
     if (t != 0)
     {
-        printf("Problem unlocking mutex in SequenceBuffer_Pop() with code %d \n", t);
+        printf("ERROR: Problem unlocking mutex in SequenceBuffer_Pop() returned with code %d \n", t);
     }
+
+    return;
 }
 
 // return a random number in the specified range
