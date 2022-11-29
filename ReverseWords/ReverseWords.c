@@ -1,3 +1,22 @@
+//|---------------------------------------------------------------------------|
+//|    FILE NAME: ReverseWords.c                                              |
+//|                                                                           |
+//|    AUTHOR   : Alex Redei, SNC Programming Test                            |
+//|                                                                           |
+//|    PURPOSE  : Reverses the words in a string                              |
+//|                Thread 1 - produces sequences that are stored in buffer    |
+//|                         - sequences may be out of order or duplicates     |
+//|                                                                           |
+//|                Thread 2 - outputs sequences from buffer in order          |
+//|                                                                           |
+//|    NOTES    : ASSUMES: character arrays are null terminated ex: '\0'      |
+//|               ASSUMES: sentence has no punctuation                        |
+//|               ASSUMES: multiple spaces are preserved                      |
+//|                                                                           |
+//|    REVISIONS:                                                             |
+//|			   11/22/22 - A. Redei - Initial Implementation w/ Loop           |
+//|---------------------------------------------------------------------------|
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
@@ -20,7 +39,6 @@ static void ReverseWords(char* string)
     int numSpace        = 0;
 
     //result string - add one to size because the strlen function does not count the null terminator
-    int* arrSpaceIdx    = (int*)malloc(size * sizeof(int));
     char* result        = (char*)malloc(size + 1); 
 
     //finds all the spaces in the string and stores their index in the arrSpaceIdx array
@@ -30,14 +48,13 @@ static void ReverseWords(char* string)
         if (j == 0)
         {
             //copy the last word over and null terminate
-            memcpy(result + i, string + j, lastSpace - j);
+            memcpy(result + i, string, lastSpace);
             result[size] = '\0'; //append the end string character
         }
 
         //when a space is found, modify the pointer sliding window
         else if (string[j] == ' ')
         {
-            arrSpaceIdx[numSpace] = j;
             int bytesToCopy = lastSpace - j - 1;
 
             //copy from here until last space
@@ -59,7 +76,6 @@ static void ReverseWords(char* string)
 
 
     //release memory
-    free(arrSpaceIdx);
     free(result);
 
     return;

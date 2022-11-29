@@ -1,7 +1,7 @@
 //|---------------------------------------------------------------------------|
 //|    FILE NAME: SeqBufTest.c                                                |
 //|                                                                           |
-//|    AUTHOR   : Alex Redei                                                  |
+//|    AUTHOR   : Alex Redei, SNC Programming Test                            |
 //|                                                                           |
 //|    PURPOSE  : Producer / Consumer concurrency paradigm                    |
 //|                Thread 1 - produces sequences that are stored in buffer    |

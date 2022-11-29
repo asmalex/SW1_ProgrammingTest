@@ -1,3 +1,16 @@
+//|---------------------------------------------------------------------------|
+//|    FILE NAME: DuplicateList.c                                             |
+//|                                                                           |
+//|    AUTHOR   : Alex Redei, SNC Programming Test                            |
+//|                                                                           |
+//|    PURPOSE  : Deep-copy of a linked list, preserving references           |
+//|                                                                           |
+//|    NOTES    : ASSUMES: this is not a circularly listed list               |
+//|                                                                           |
+//|    REVISIONS:                                                             |
+//|			   11/22/22 - A. Redei - Initial Implementation                   |
+//|			   11/23/22 - A. Redei - Improved Alternate implementation w/ zip |
+//|---------------------------------------------------------------------------|
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
