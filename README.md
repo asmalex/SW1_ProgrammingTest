@@ -11,7 +11,7 @@ Reverses the words of a sentence - preserving whitespace and punctuation.
 Uses two iterators to loop through the orignal string backwards (iterator j) and construct a new string (iterator i). This is similar to the 'sliding window' pointer technique.
 
 #### Alternate Implementations
-Using a stack datastructure, the FILO property (first-in-last-out) could be exploited to re-construct the words backwards. I like this implementation if we had multiple sentences in a string, or where punctuation wasn't preserved with the original word. The branch ReverseString_Stack contains coe for this implementation, but it was abandoned in favor of the simpler (and memory lean) implementation above.
+Using a stack datastructure, the FILO property (first-in-last-out) could be exploited to re-construct the words backwards. I like this implementation if we had multiple sentences in a string, or where punctuation wasn't preserved with the original word. The branch ReverseString_Stack contains code for this implementation, but it was abandoned in favor of the simpler (and memory lean) implementation above.
 
 ## Unit Tests
 The following unit tests are automatically executed and run against any new build:
