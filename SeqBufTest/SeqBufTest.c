@@ -1,3 +1,26 @@
+//|---------------------------------------------------------------------------|
+//|    FILE NAME: SeqBufTest.c                                                |
+//|                                                                           |
+//|    AUTHOR   : Alex Redei                                                  |
+//|                                                                           |
+//|    PURPOSE  : Producer / Consumer concurrency paradigm                    |
+//|                Thread 1 - produces sequences that are stored in buffer    |
+//|                         - sequences may be out of order or duplicates     |
+//|                                                                           |
+//|                Thread 2 - outputs sequences from buffer in order          |
+//|                                                                           |
+//|    NOTES    : Current implementation preserves the buffer when Pop()      |
+//|                is called.                                                 |
+//|                                                                           |
+//|               SEQ_SEARCH_RADIUS_MAX - max nodes to search for out-of-order|
+//|                                        sequence                           |
+//|                                                                           |
+//|               DEBUG                 - prints debug output to console      |
+//|                                                                           |
+//|    REVISIONS:                                                             |
+//|			   11/29/22 - A. Redei - Initial Implementation                   |
+//|---------------------------------------------------------------------------|
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
@@ -9,7 +32,7 @@
 #include <Windows.h>
 
 #define SEQ_BUFFER_STRING_MAX   (32)
-#define SEQ_SEARCH_RADIUS_MAX   (50)
+#define SEQ_SEARCH_RADIUS_MAX   (5)
 
 // Set to 0 to disable console output
 // Set to 1 for logging mutex activity on console
@@ -30,10 +53,15 @@ typedef struct Node_s
 } Node_t;
 
 // Sequence Buffer definition
-//ASSUMPTION: Sequences are not more than 5 out of order (it seems they are)
+//ASSUMPTION: Sequences are not more than 5 out of order (it says so in the main() description)
+//ASSUMPTION: Sequences are not skipped (it says so in the main() description)
+//ASSUMPTION: Preserve the sequences in the linked list, even though the terminology Push() and Pop() may imply otherwise
 typedef struct SequenceBuffer_s
 {
     //double-linked list to store sequence items
+    //head - stores the head of the list
+    //last - stores the last item push()-ed
+    //current - stores the last item pop()-ed
     Node_t* head;
     Node_t* last;
     Node_t* current;
@@ -44,7 +72,7 @@ typedef struct SequenceBuffer_s
 } SequenceBuffer_t;
 
 
-// Print the list
+// HELPER FUNCTION: Prints the linked list
 static void PrintList(Node_t* list)
 {
     uint32_t count = 0;
@@ -62,20 +90,22 @@ static void PrintList(Node_t* list)
 }
 
 
-// TODO: implement this function
+// Initializes the Sequence Buffer
 static void SequenceBuffer_Init(SequenceBuffer_t* seqBuf)
 {
+    //initialize the mutex and set maxSeq to zero
     seqBuf->maxSeq = 0;
     seqBuf->mutex = PTHREAD_MUTEX_INITIALIZER;
 
     int t;
     t = pthread_mutex_init(&seqBuf->mutex, NULL);
-    printf("Initialized the mutex returned %d \n", t);
+    if(t!= 0)
+        printf("Initialized the mutex returned %d \n", t);
     seqBuf->last = seqBuf->head = seqBuf->current = NULL;
 }
 
-// TODO: implement this function
 //non-blocking thread safe
+//trylock() is non-blocking
 static void SequenceBuffer_Push(SequenceBuffer_t* seqBuf, const char* string, uint32_t seq)
 {
     //Sanity check that seqBuf is not null
@@ -95,7 +125,7 @@ static void SequenceBuffer_Push(SequenceBuffer_t* seqBuf, const char* string, ui
 
         t = sched_yield();
         if (t != 0)
-            printf("ERROR: scheduling yield while trylock in Push() returne %d", t);
+            printf("ERROR: scheduling yield while trylock in Push() returned %d", t);
 
         t = pthread_mutex_trylock(&seqBuf->mutex); //try to get the lock again
     }
@@ -119,8 +149,13 @@ static void SequenceBuffer_Push(SequenceBuffer_t* seqBuf, const char* string, ui
     else
     {
         //Check if duplicate. If so, just skip
-        //if (seqBuf->last->seq == seq)
-        //    return;
+        if (seqBuf->last->seq == seq)
+        {
+            t = pthread_mutex_unlock(&seqBuf->mutex);
+            if (t != 0)
+                printf("ERROR: unable to unlock in Push() after duplicate found returned %d", t);
+            return;
+        }
 
         //add the next item onto the list and increment list to next node
         seqBuf->last->next = (Node_t*)malloc(sizeof(Node_t));
@@ -150,12 +185,15 @@ static void SequenceBuffer_Push(SequenceBuffer_t* seqBuf, const char* string, ui
     PrintList(seqBuf->head);
     #endif // DEBUG LINKED LIST
 
+    //free the mutex
     t = pthread_mutex_unlock(&seqBuf->mutex);
     if (t != 0)
     {
         printf("ERROR: Unlock mutex failed at SequenceBuffer_Push() returned code %d", t);
         return;
     }
+
+    return;
 }
 
 //a helper function 
@@ -200,6 +238,8 @@ static Node_t* SearchNextNode(Node_t* list, const int expectedResult, const int 
 // blocking thread-safe
 static void SequenceBuffer_Pop(SequenceBuffer_t* seqBuf, char outputString[SEQ_BUFFER_STRING_MAX])
 {
+    int t; //stores the return codes from mutex and threading functions
+
     //Sanity check that seqBuf is not null
     if (seqBuf == NULL)
     {
@@ -208,30 +248,41 @@ static void SequenceBuffer_Pop(SequenceBuffer_t* seqBuf, char outputString[SEQ_B
     }
 
     //sanity check that current is not null
-    //if it is, try to retieve the very first item
+    //if it is, then this is the first time Pop() was called. Try to retieve the very first item
     if (seqBuf->current == NULL)
     {
         //and we check we have at least 1 item
         if (seqBuf->head != NULL)
         {
             //retrieve the first item
-            pthread_mutex_lock(&seqBuf->mutex);
-            seqBuf->current = seqBuf->head;
+            t = pthread_mutex_lock(&seqBuf->mutex);
+            if (t != 0)
+                printf("ERROR: Attempting to lock mutex in Pop() with 1 item failed with code %d \n", t);
+
+            seqBuf->current = seqBuf->head;         //there is only 1 element, so initialize current pointer to head
             strcpy(outputString, seqBuf->current->seqText);
             pthread_mutex_unlock(&seqBuf->mutex);
+            if (t != 0)
+                printf("ERROR: Attempting to unlock mutex in Pop() with 1 item failed with code %d \n", t);
+
         }
 
         //if current is null, and head is null, this means our list is empty.
         //wait for next sequence to be added
+
+        t = sched_yield(); //try yielding to let the other thread add an item to the list
+        if (t != 0)
+            printf("ERROR: Problem yielding Pop() thread with error code %d \n", t);
+
         return;
     }
 
+    //set outputString to an empty string
     strcpy(outputString, "");
-    int t = pthread_mutex_lock(&seqBuf->mutex);
+    t = pthread_mutex_lock(&seqBuf->mutex);
     //printf("Locked pop with mutex returned code %d \n", t);
     if (t != 0)
         printf("ERROR: Unable to lock mutex in SequenceBuffer_Pop() with error code %d \n", t);
-
 
     if (seqBuf->current != NULL)
     {
@@ -301,8 +352,6 @@ static void SequenceBuffer_Pop(SequenceBuffer_t* seqBuf, char outputString[SEQ_B
         //copy the result to the string
         strcpy(outputString, seqBuf->current->seqText);
 
-
- 
         #if DEBUG > 1
         printf("END of Pop() \n");
         printf("Head %p | Last %p | Current %p | MaxSeq %d\n", seqBuf->head, seqBuf->last, seqBuf->current, seqBuf->maxSeq);
@@ -471,12 +520,6 @@ int main()
 
     int32_t ret2 = pthread_create(&thread2, NULL, PopThread, &seq_buf);
     assert(ret2 == 0);
-
-    //int32_t ret3 = pthread_create(&thread3, NULL, PushThread, &seq_buf);
-    //assert(ret3 == 0);
-
-    //int32_t ret4 = pthread_create(&thread4, NULL, PopThread, &seq_buf);
-    //assert(ret4 == 0);
 
     // done
     printf("\nPress ESC to finish...\n");
