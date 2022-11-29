@@ -2,7 +2,7 @@
 [![Build and Test](https://github.com/asmalex/SW1_ProgrammingTest/actions/workflows/msbuild.yml/badge.svg)](https://github.com/asmalex/SW1_ProgrammingTest/actions/workflows/msbuild.yml)
 <!--[![Release](/github/v/release/asmalex/SW1_ProgrammingTest)]-->
 
-There are three sub-problems: Duplicate List, Sequence Buffer, and Reverse Words. As you can see from the status badge above, this repo will automatically build and execute unit tests against anything pushed or pull-requested into the main branch. A description of the sub-problems and their solution (as well as assumptions) is documented below:
+This repo will automatically trigger an MSBuild and execute 8 unit tests against anything checked into the main branch. There are three sub-problems: Duplicate List, Sequence Buffer, and Reverse Words. A description of the sub-problems and their solution (as well as assumptions) is documented below:
 
 ## Reverse Words
 Reverses the words of a sentence - preserving whitespace and punctuation.
