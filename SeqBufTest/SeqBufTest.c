@@ -55,6 +55,7 @@ static void PrintList(Node_t* list)
 
         ++count;
     }
+    printf("\n");
     #if DEBUG > 2
     printf("Printed %d nodes\n", count);
     #endif
@@ -84,26 +85,30 @@ static void SequenceBuffer_Push(SequenceBuffer_t* seqBuf, const char* string, ui
         return;
     }
 
-    int t = pthread_mutex_lock(&seqBuf->mutex);
+    //attempt to grab the mutex in a non-blocking way
+    int t = pthread_mutex_trylock(&seqBuf->mutex);
     while (t == EBUSY)
     {
         #if DEBUG > 0
             printf("Thread is busy at sequence %d \n", seq);
         #endif // DEBUG
-        Sleep(50);
+
+        t = sched_yield();
+        if (t != 0)
+            printf("ERROR: scheduling yield while trylock in Push() returne %d", t);
+
+        t = pthread_mutex_trylock(&seqBuf->mutex); //try to get the lock again
     }
+
+    #if DEBUG > 0
+    printf("Sequence %d locked mutex with code %d \n", seq, t);
+    #endif // DEBUG
 
     #if DEBUG > 1 
     printf("BEGIN PUSH() FUNCTION \n");
     printf("Head %p | Last %p | Current %p | MaxSeq %d\n", seqBuf->head, seqBuf->last, seqBuf->current, seqBuf->maxSeq);
     PrintList(seqBuf->head);
     #endif // DEBUG LINKED LIST
-
-
-
-    #if DEBUG > 0
-    printf("Sequence %d locked mutex with code %d \n", seq, t);
-    #endif // DEBUG
 
     //if this is the first item in our list, set head and set list to 1st element
     if (seqBuf->last == NULL)
@@ -113,6 +118,10 @@ static void SequenceBuffer_Push(SequenceBuffer_t* seqBuf, const char* string, ui
     }
     else
     {
+        //Check if duplicate. If so, just skip
+        //if (seqBuf->last->seq == seq)
+        //    return;
+
         //add the next item onto the list and increment list to next node
         seqBuf->last->next = (Node_t*)malloc(sizeof(Node_t));
         seqBuf->last->next->prev = seqBuf->last;    //set the previous of the next node to the current node
@@ -233,16 +242,16 @@ static void SequenceBuffer_Pop(SequenceBuffer_t* seqBuf, char outputString[SEQ_B
             if (t != 0)
                 printf("ERROR: Unable to lock mutex in SequenceBuffer_Pop() with error code %d \n", t);
 
-            t = sched_yield(); //try yielding to see if that changes the situation
-            Sleep(50);
+            t = sched_yield(); //try yielding to let the other thread add an item to the list
+            if (t != 0)
+                printf("ERROR: Problem yielding Pop() thread with error code %d \n", t);
 
             #if DEBUG > 1
             printf("Scheduled yield returned code %d \n", t);
             #endif // DEBUG
 
             //now relock the mutex and proceed:
-
-            int t = pthread_mutex_lock(&seqBuf->mutex);
+            t = pthread_mutex_lock(&seqBuf->mutex);
             if (t != 0)
                 printf("ERROR: Unable to unlock mutex in SequenceBuffer_Pop() after yield with error code %d \n", t);
 
@@ -256,23 +265,49 @@ static void SequenceBuffer_Pop(SequenceBuffer_t* seqBuf, char outputString[SEQ_B
 
         //at this point, current either is the location of the next sequence
         //or the next sequence simply does not exist yet...
-        if (nextSeqNode != NULL)
-        {
-            //set the current node to the node we found
-            seqBuf->current = nextSeqNode;
 
-            //copy the result to the string
-            strcpy(outputString, seqBuf->current->seqText);
-        }
-        else
+        for (int i = 0; nextSeqNode == NULL; i++)
         {
+            //debug
             #if DEBUG > 1
-            printf("We searched the array and were not able to find the next sequence \n");
+            printf("We searched the array [%d] times and were not able to find the next sequence \n", i);
             printf("Going to yield until the next node shows up. Below is a dump of the linked list \n");
             printf("Head %p | Last %p | Current %p | MaxSeq %d\n", seqBuf->head, seqBuf->last, seqBuf->current, seqBuf->maxSeq);
             PrintList(seqBuf->head);
             #endif // DEBUG
+
+            //unlock mutex
+            t = pthread_mutex_unlock(&seqBuf->mutex);
+            if(t!=0)
+                printf("ERROR: Unable to unlock mutex in SequenceBuffer_Pop() in wait for next sequence loop with error code %d \n", t);
+
+            //yield
+            t = sched_yield();
+            if (t != 0)
+                printf("ERROR: Problem yielding Pop() thread with error code %d \n", t);
+
+            //lock mutex
+            t = pthread_mutex_lock(&seqBuf->mutex);
+            if (t != 0)
+                printf("ERROR: Unable to unlock mutex in SequenceBuffer_Pop() in wait for next sequence loop with error code %d \n", t);
+
+            //see if new item was added.
+            nextSeqNode = SearchNextNode(seqBuf->current, expectedNode, SEQ_SEARCH_RADIUS_MAX);
         }
+
+        //set the current node to the node we found
+        seqBuf->current = nextSeqNode;
+
+        //copy the result to the string
+        strcpy(outputString, seqBuf->current->seqText);
+
+
+ 
+        #if DEBUG > 1
+        printf("END of Pop() \n");
+        printf("Head %p | Last %p | Current %p | MaxSeq %d\n", seqBuf->head, seqBuf->last, seqBuf->current, seqBuf->maxSeq);
+        PrintList(seqBuf->head);
+        #endif // DEBUG
 
     } //END IF
 
